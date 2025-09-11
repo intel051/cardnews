@@ -15,7 +15,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 2rem 1rem;
+            padding: 1rem; /* 여백을 줄여서 화면을 더 넓게 사용 */
             box-sizing: border-box;
             min-height: 100vh;
             overflow-x: hidden; /* 좌우 스크롤 방지 */
@@ -84,6 +84,7 @@
             align-items: center;
             justify-content: center;
             box-sizing: border-box;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .card-number {
             position: absolute;
@@ -99,16 +100,19 @@
             font-weight: 700;
             color: #333;
             margin-bottom: 0.5rem;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .card-subtitle {
             font-size: clamp(0.875rem, 3vw, 1rem);
             color: #666;
             margin-bottom: 1.5rem;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .card-content {
             font-size: clamp(1rem, 3.5vw, 1.125rem);
             line-height: 1.6;
             color: #444;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .stat-highlight {
             font-weight: 700;
@@ -151,6 +155,9 @@
             margin-top: 1rem;
             text-align: left;
         }
+        #output-main-title {
+            font-family: inherit; /* 폰트 상속 강제 적용 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center p-8">
@@ -169,7 +176,7 @@
             <div class="input-group">
                 <label for="main-title" class="responsive-text-sm">카드뉴스 제목</label>
                 <div class="input-with-button">
-                    <input type="text" id="main-title" placeholder="예: 시부야 맛집 top7" value="">
+                    <input type="text" id="main-title" placeholder="예: 시부야 맛집 Top7" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
                         &#x2715; <!-- X 마크 -->
                     </button>
@@ -280,12 +287,12 @@
                 return;
             }
 
-            // 모든 작업을 시작하기 전에 스피너를 보여주고, 가이드 텍스트를 숨깁니다.
             loadingSpinner.style.display = 'block';
             howToGuide.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
             saveButton.style.display = 'none';
+
 
             try {
                 let content = '';
@@ -442,7 +449,6 @@ Summary: ${summary}`;
                 console.error('Error generating card news:', error);
                 displayError(error.message);
             } finally {
-                // 모든 작업이 끝난 후에 스피너를 숨깁니다.
                 loadingSpinner.style.display = 'none';
             }
         };
@@ -502,7 +508,6 @@ Summary: ${summary}`;
             fileUploadInput.value = '';
             clearTimeout(debounceTimeout);
             if (mainTitleInput.value.trim() !== '') {
-                // Debounce가 시작될 때 스피너를 바로 보여줍니다.
                 loadingSpinner.style.display = 'block';
                 howToGuide.style.display = 'none';
                 debounceTimeout = setTimeout(() => {
@@ -518,7 +523,6 @@ Summary: ${summary}`;
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
             if (fileUploadInput.files.length > 0) {
-                 // 파일이 선택되면 스피너를 바로 보여줍니다.
                  loadingSpinner.style.display = 'block';
                  howToGuide.style.display = 'none';
                  generateCardNews();
@@ -536,7 +540,13 @@ Summary: ${summary}`;
         });
 
 
-        resetButton.addEventListener('click', resetApp);
+        resetButton.addEventListener('click', () => {
+            resetApp();
+            // 초기화 후 다시 생성할 때 스피너를 위해 debounce를 초기화
+            clearTimeout(debounceTimeout);
+        });
+
+
         saveButton.addEventListener('click', saveCardsAsPng);
         
         document.addEventListener('DOMContentLoaded', () => {
