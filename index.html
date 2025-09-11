@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -15,13 +15,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 2rem;
+            padding: 2rem 1rem;
             box-sizing: border-box;
             min-height: 100vh;
         }
         .container {
             width: 100%;
-            max-width: 800px;
+            max-width: 1200px;
             display: flex;
             flex-direction: column;
             gap: 2rem;
@@ -41,22 +41,37 @@
             display: block;
             margin-bottom: 0.5rem;
         }
-        .input-group input {
+        .input-with-button {
+            position: relative;
+        }
+        .input-with-button input {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.75rem 3rem 0.75rem 0.75rem;
             border-radius: 0.5rem;
             border: 1px solid #d1d5db;
             transition: border-color 0.2s;
         }
-        .input-group input:focus {
+        .input-with-button input:focus {
             outline: none;
             border-color: #2563eb;
+        }
+        .input-clear-btn {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0.25rem;
         }
         .card {
             background-color: white;
             border-radius: 1.5rem;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
+            padding: clamp(1rem, 5vw, 2.5rem); /* 반응형 패딩 적용 */
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -69,24 +84,24 @@
             position: absolute;
             top: 1rem;
             right: 1.5rem;
-            font-size: 3rem;
+            font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 700;
             color: #e2e8f0;
             line-height: 1;
         }
         .card-title {
-            font-size: 1.5rem;
+            font-size: clamp(1.25rem, 4vw, 1.5rem);
             font-weight: 700;
             color: #333;
             margin-bottom: 0.5rem;
         }
         .card-subtitle {
-            font-size: 1rem;
+            font-size: clamp(0.875rem, 3vw, 1rem);
             color: #666;
             margin-bottom: 1.5rem;
         }
         .card-content {
-            font-size: 1.125rem;
+            font-size: clamp(1rem, 3.5vw, 1.125rem);
             line-height: 1.6;
             color: #444;
         }
@@ -95,7 +110,7 @@
             color: #2563eb;
         }
         .emoji {
-            font-size: 2.5rem;
+            font-size: clamp(2rem, 6vw, 2.5rem);
             margin-bottom: 1rem;
         }
         .loading-spinner {
@@ -115,7 +130,15 @@
         .placeholder-text {
             color: #9ca3af;
             text-align: center;
-            font-size: 1.25rem;
+            font-size: clamp(1rem, 3.5vw, 1.25rem);
+        }
+        .responsive-text-sm {
+            font-size: 0.875rem;
+        }
+        @media (min-width: 768px) {
+            .responsive-text-sm {
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
@@ -125,35 +148,48 @@
     <div class="container">
         <!-- 입력 섹션 -->
         <div class="input-section">
-            <h2 class="text-2xl font-bold mb-4 text-center">카드뉴스 제목 입력</h2>
+            <h2 class="text-2xl font-bold mb-4 text-center">카드뉴스 생성기</h2>
             <div class="input-group">
-                <label for="main-title">카드뉴스 제목</label>
-                <input type="text" id="main-title" placeholder="예: 오라클 실적 요약" value="오라클, AI 시대의 승자">
+                <label for="main-title" class="responsive-text-sm">카드뉴스 제목</label>
+                <div class="input-with-button">
+                    <input type="text" id="main-title" placeholder="예: 넷플릭스 1분기 실적" value="">
+                    <button id="clear-button" class="input-clear-btn" style="display:none;">
+                        &#x2715; <!-- X 마크 -->
+                    </button>
+                </div>
             </div>
-            <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하고 잠시 기다리면 카드뉴스가 자동으로 생성됩니다.</p>
+            <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하면 AI가 최대 20장까지 카드뉴스를 만들어요. (입력 후 잠시 기다려주세요)</p>
         </div>
 
 
         <!-- 카드뉴스 섹션 -->
-        <div id="card-news-section" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div id="card-news-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="loading-spinner" id="loading-spinner"></div>
             <h1 id="output-main-title" class="text-3xl font-bold text-center text-gray-800 mb-4 col-span-full"></h1>
-            <p id="placeholder-text" class="placeholder-text col-span-full">카드뉴스가 생성될 공간입니다.</p>
+            <div id="how-to-guide" class="placeholder-text col-span-full p-8 md:p-12">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-700 mb-4">카드뉴스 사용법</h2>
+                <p class="mb-2 text-gray-600">이곳은 자동 생성 카드뉴스가 표시될 공간이에요. 사용법은 아주 간단해요!</p>
+                <p class="mb-2 text-gray-600">1. 위에 있는 입력 칸에 원하는 <b>카드뉴스 제목</b>을 입력하세요.</p>
+                <p class="mb-2 text-gray-600">2. 제목을 입력하고 잠시 기다리면, AI가 내용을 분석해 자동으로 멋진 카드뉴스를 만들어줄 거예요.</p>
+                <p class="mb-2 text-gray-600">3. 내용에 따라 **최대 20장**까지 생성돼요.</p>
+                <p class="text-gray-600 mt-4">예시: '넷플릭스 1분기 실적', '최신 AI 트렌드', '건강한 식습관 팁'</p>
+                <p class="text-gray-600 font-bold mt-4">지금 바로 첫 번째 카드뉴스를 만들어보세요! 😊</p>
+            </div>
         </div>
     </div>
 
 
     <script>
-        // 이 API 키는 외부 환경에서 자동으로 제공됩니다.
-        const apiKey = "AIzaSyA2hYnuaD9jwNEI0M6ZJW5FujwFcNPES14";
+        const apiKey = "";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
 
         const mainTitleInput = document.getElementById('main-title');
+        const clearButton = document.getElementById('clear-button');
         const loadingSpinner = document.getElementById('loading-spinner');
         const cardNewsSection = document.getElementById('card-news-section');
         const outputMainTitle = document.getElementById('output-main-title');
-        const placeholderText = document.getElementById('placeholder-text');
+        const howToGuide = document.getElementById('how-to-guide');
 
 
         // 카드 생성 및 추가 함수
@@ -178,22 +214,21 @@
             if (userPrompt.trim() === '') {
                 outputMainTitle.innerText = '';
                 cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
-                placeholderText.style.display = 'block';
+                howToGuide.style.display = 'block';
                 return;
             }
 
 
-            // 기존에 있던 로딩 스피너와 플레이스홀더 텍스트를 숨깁니다.
+            // 기존 카드들을 모두 제거하고 로딩 시작
             loadingSpinner.style.display = 'block';
-            placeholderText.style.display = 'none';
-            // 기존 카드들을 모두 제거합니다.
+            howToGuide.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
 
 
-            const systemPrompt = "You are a financial analyst and a creative writer. Based on the user's title, generate a four-card news summary. Each card must have a title, subtitle, and content. The tone should be friendly and easy to understand. The response must be a valid JSON object. Do not include any text outside the JSON block.";
+            const systemPrompt = "You are a financial analyst and a creative writer. Based on the user's title, generate a card news summary with a minimum of 4 and a maximum of 20 cards. The number of cards should be determined by the content length. Each card must have a title, subtitle, and content. The tone should be friendly and easy to understand. The response must be a valid JSON object. Do not include any text outside the JSON block.";
             
-            const prompt = `Based on the following title, generate a four-card news summary. Make the content engaging and concise. The response MUST be a valid JSON object with the following structure: { "mainTitle": "string", "cards": [{ "title": "string", "subtitle": "string", "content": "string", "emoji": "string" }, ...] }. The content field can contain simple HTML tags like <b> for highlighting keywords. User title: "${userPrompt}"`;
+            const prompt = `Based on the following title, generate a card news summary. Make the content engaging and concise. The response MUST be a valid JSON object with the following structure: { "mainTitle": "string", "cards": [{ "title": "string", "subtitle": "string", "content": "string", "emoji": "string" }, ...] }. User title: "${userPrompt}"`;
             
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -243,8 +278,7 @@
                 
                 outputMainTitle.innerText = parsedJson.mainTitle;
                 parsedJson.cards.forEach((card, index) => {
-                    const safeContent = card.content ? card.content.replace(/<.*?>/g, '') : '내용이 생성되지 않았습니다.';
-                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', safeContent);
+                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.');
                 });
 
 
@@ -260,11 +294,23 @@
 
         let debounceTimeout;
         mainTitleInput.addEventListener('input', () => {
+            // 입력이 있을 때만 지우기 버튼 표시
+            clearButton.style.display = mainTitleInput.value.length > 0 ? 'block' : 'none';
             clearTimeout(debounceTimeout);
             debounceTimeout = setTimeout(generateCardNews, 1500);
         });
+
+        clearButton.addEventListener('click', () => {
+            mainTitleInput.value = '';
+            clearButton.style.display = 'none';
+            generateCardNews();
+        });
         
-        document.addEventListener('DOMContentLoaded', generateCardNews);
+        // 초기 로딩 시 가이드 표시
+        document.addEventListener('DOMContentLoaded', () => {
+            howToGuide.style.display = 'block';
+        });
     </script>
 </body>
 </html>
+
