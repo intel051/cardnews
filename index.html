@@ -18,6 +18,7 @@
             padding: 2rem 1rem;
             box-sizing: border-box;
             min-height: 100vh;
+            overflow-x: hidden; /* 좌우 스크롤 방지 */
         }
         .container {
             width: 100%;
@@ -25,6 +26,7 @@
             display: flex;
             flex-direction: column;
             gap: 2rem;
+            margin: 0 auto;
         }
         .input-section {
             background-color: white;
@@ -153,6 +155,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <!-- Mammoth.js 라이브러리 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth.js/1.4.15/mammoth.browser.min.js"></script>
+    <!-- html2canvas 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 
     <div class="container">
         <!-- 입력 섹션 -->
@@ -170,12 +175,16 @@
             <p class="text-sm text-gray-500 text-center mt-4">또는</p>
             <div class="input-group">
                 <label for="file-upload" class="responsive-text-sm">문서 파일(.pdf, .docx) 업로드</label>
-                <!-- PDF와 DOCX 파일만 선택되도록 수정했어요. -->
                 <input type="file" id="file-upload" accept="application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document">
             </div>
-            <button id="reset-button" class="mt-4 w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors">
-                초기화
-            </button>
+            <div class="flex flex-col md:flex-row gap-4 mt-4">
+                <button id="reset-button" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors">
+                    초기화
+                </button>
+                <button id="save-button" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-blue-600 transition-colors" style="display:none;">
+                    PNG로 저장
+                </button>
+            </div>
             <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하거나 파일을 업로드하면 AI가 내용을 분석해 카드뉴스를 만들어요.</p>
         </div>
 
@@ -210,6 +219,7 @@
         const fileUploadInput = document.getElementById('file-upload');
         const clearButton = document.getElementById('clear-button');
         const resetButton = document.getElementById('reset-button');
+        const saveButton = document.getElementById('save-button');
         const loadingSpinner = document.getElementById('loading-spinner');
         const cardNewsSection = document.getElementById('card-news-section');
         const outputMainTitle = document.getElementById('output-main-title');
@@ -257,7 +267,6 @@
             const hasTextPrompt = mainTitleInput.value.trim() !== '';
 
             if (!file && !hasTextPrompt) {
-                // 초기화 버튼을 누르거나, 입력 필드가 모두 비었을 때
                 resetApp();
                 return;
             }
@@ -272,6 +281,8 @@
             howToGuide.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
+            saveButton.style.display = 'none';
+
 
             try {
                 let content = '';
@@ -279,41 +290,57 @@
                     if (file.type === 'application/pdf') {
                         const reader = new FileReader();
                         reader.onload = async (e) => {
-                            const typedarray = new Uint8Array(e.target.result);
-                            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-                            let pdfText = '';
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const textContent = await page.getTextContent();
-                                pdfText += textContent.items.map(item => item.str).join(' ');
+                            try {
+                                const typedarray = new Uint8Array(e.target.result);
+                                const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+                                let pdfText = '';
+                                for (let i = 1; i <= pdf.numPages; i++) {
+                                    const page = await pdf.getPage(i);
+                                    const textContent = await page.getTextContent();
+                                    pdfText += textContent.items.map(item => item.str).join(' ');
+                                }
+                                await processContentAndGenerate(pdfText, false);
+                            } catch (error) {
+                                displayError("PDF 파일을 읽는 도중 오류가 발생했습니다.");
+                            } finally {
+                                loadingSpinner.style.display = 'none';
                             }
-                            processContentAndGenerate(pdfText, false);
                         };
-                        reader.onerror = (e) => displayError("PDF 파일을 읽는 도중 오류가 발생했습니다.");
+                        reader.onerror = (e) => {
+                            displayError("PDF 파일을 읽는 도중 오류가 발생했습니다.");
+                            loadingSpinner.style.display = 'none';
+                        };
                         reader.readAsArrayBuffer(file);
                         return;
                     } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                         const reader = new FileReader();
                         reader.onload = async (e) => {
-                            const arrayBuffer = e.target.result;
-                            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-                            const docxText = result.value;
-                            processContentAndGenerate(docxText, false);
+                            try {
+                                const arrayBuffer = e.target.result;
+                                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                                const docxText = result.value;
+                                await processContentAndGenerate(docxText, false);
+                            } catch (error) {
+                                displayError("DOCX 파일을 읽는 도중 오류가 발생했습니다.");
+                            } finally {
+                                loadingSpinner.style.display = 'none';
+                            }
                         };
-                        reader.onerror = (e) => displayError("DOCX 파일을 읽는 도중 오류가 발생했습니다.");
+                        reader.onerror = (e) => {
+                            displayError("DOCX 파일을 읽는 도중 오류가 발생했습니다.");
+                            loadingSpinner.style.display = 'none';
+                        };
                         reader.readAsArrayBuffer(file);
                         return;
                     } else {
                         throw new Error("지원하지 않는 파일 형식입니다. .pdf, .docx 파일을 업로드해주세요.");
                     }
                 } else {
-                    processContentAndGenerate(mainTitleInput.value, true);
+                    await processContentAndGenerate(mainTitleInput.value, true);
                 }
-
             } catch (error) {
                 console.error('Error generating card news:', error);
                 displayError(error.message);
-            } finally {
                 loadingSpinner.style.display = 'none';
             }
         };
@@ -404,6 +431,10 @@ Summary: ${summary}`;
                     createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.', sources);
                 });
 
+                if (parsedJson.cards.length > 0) {
+                    saveButton.style.display = 'block';
+                }
+
             } catch (error) {
                 console.error('Error generating card news:', error);
                 displayError(error.message);
@@ -412,42 +443,92 @@ Summary: ${summary}`;
             }
         };
 
+        // PNG로 저장하는 함수
+        const saveCardsAsPng = async () => {
+            const cards = document.querySelectorAll('.card');
+            if (cards.length === 0) return;
+
+            const originalButtonText = saveButton.textContent;
+            saveButton.textContent = '저장 중...';
+            saveButton.disabled = true;
+
+            const promises = Array.from(cards).map((card, index) => {
+                return new Promise((resolve) => {
+                    html2canvas(card, {
+                        backgroundColor: '#ffffff',
+                        scale: 2 // 고해상도 이미지 생성을 위해 스케일 2배 적용
+                    }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = `카드뉴스_${index + 1}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        resolve();
+                    });
+                });
+            });
+
+            await Promise.all(promises);
+
+            saveButton.textContent = originalButtonText;
+            saveButton.disabled = false;
+        };
+
+
         const displayError = (message) => {
             outputMainTitle.innerText = '카드뉴스 생성 실패';
             cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해 주세요. 만약 오류가 계속 발생하면, 다른 제목으로 시도해보세요. 오류 유형: ${message}</p>`;
         };
 
+
         const resetApp = () => {
             mainTitleInput.value = '';
             fileUploadInput.value = '';
             clearButton.style.display = 'none';
+            saveButton.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.innerHTML = '';
             howToGuide.style.display = 'block';
         };
+
 
         let debounceTimeout;
         mainTitleInput.addEventListener('input', () => {
             clearButton.style.display = mainTitleInput.value.length > 0 ? 'block' : 'none';
             fileUploadInput.value = '';
             clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(generateCardNews, 1500);
+            if (mainTitleInput.value.trim() !== '') {
+                loadingSpinner.style.display = 'block';
+                debounceTimeout = setTimeout(() => {
+                    generateCardNews();
+                }, 1500);
+            } else {
+                resetApp();
+            }
         });
+
 
         fileUploadInput.addEventListener('change', () => {
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
-            generateCardNews();
+            if (fileUploadInput.files.length > 0) {
+                 loadingSpinner.style.display = 'block';
+                 generateCardNews();
+            } else {
+                resetApp();
+            }
         });
+
 
         clearButton.addEventListener('click', () => {
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
             fileUploadInput.value = '';
-            generateCardNews();
+            resetApp();
         });
 
+
         resetButton.addEventListener('click', resetApp);
+        saveButton.addEventListener('click', saveCardsAsPng);
         
         document.addEventListener('DOMContentLoaded', () => {
             howToGuide.style.display = 'block';
@@ -455,4 +536,5 @@ Summary: ${summary}`;
     </script>
 </body>
 </html>
+
 
