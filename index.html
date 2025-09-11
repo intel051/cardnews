@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자동 생성 카드뉴스</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            box-sizing: border-box;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        .input-section {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        .input-group label {
+            font-weight: 700;
+            color: #4b5563;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-number {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            line-height: 1;
+        }
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        .card-subtitle {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        .card-content {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            color: #444;
+        }
+        .stat-highlight {
+            font-weight: 700;
+            color: #2563eb;
+        }
+        .emoji {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #2563eb;
+            animation: spin 1s ease infinite;
+            margin: 2rem auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .placeholder-text {
+            color: #9ca3af;
+            text-align: center;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center p-8">
+
+
+    <div class="container">
+        <!-- 입력 섹션 -->
+        <div class="input-section">
+            <h2 class="text-2xl font-bold mb-4 text-center">카드뉴스 제목 입력</h2>
+            <div class="input-group">
+                <label for="main-title">카드뉴스 제목</label>
+                <input type="text" id="main-title" placeholder="예: 오라클 실적 요약" value="오라클, AI 시대의 승자">
+            </div>
+            <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하고 잠시 기다리면 카드뉴스가 자동으로 생성됩니다.</p>
+        </div>
+
+
+        <!-- 카드뉴스 섹션 -->
+        <div id="card-news-section" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="loading-spinner" id="loading-spinner"></div>
+            <h1 id="output-main-title" class="text-3xl font-bold text-center text-gray-800 mb-4 col-span-full"></h1>
+            <p id="placeholder-text" class="placeholder-text col-span-full">카드뉴스가 생성될 공간입니다.</p>
+        </div>
+    </div>
+
+
+    <script>
+        // 이 API 키는 외부 환경에서 자동으로 제공됩니다.
+        const apiKey = "AIzaSyA2hYnuaD9jwNEI0M6ZJW5FujwFcNPES14";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+
+        const mainTitleInput = document.getElementById('main-title');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const cardNewsSection = document.getElementById('card-news-section');
+        const outputMainTitle = document.getElementById('output-main-title');
+        const placeholderText = document.getElementById('placeholder-text');
+
+
+        // 카드 생성 및 추가 함수
+        const createCard = (cardNumber, emoji, cardTitle, cardSubtitle, cardContent) => {
+            const cardHtml = `
+                <div class="card">
+                    <div class="card-number">${cardNumber}</div>
+                    <div class="emoji">${emoji}</div>
+                    <h2 class="card-title">${cardTitle}</h2>
+                    <p class="card-subtitle">${cardSubtitle}</p>
+                    <p class="card-content">${cardContent}</p>
+                </div>
+            `;
+            const card = document.createElement('div');
+            card.innerHTML = cardHtml;
+            cardNewsSection.appendChild(card.firstElementChild);
+        };
+
+
+        const generateCardNews = async () => {
+            const userPrompt = mainTitleInput.value;
+            if (userPrompt.trim() === '') {
+                outputMainTitle.innerText = '';
+                cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
+                placeholderText.style.display = 'block';
+                return;
+            }
+
+
+            // 기존에 있던 로딩 스피너와 플레이스홀더 텍스트를 숨깁니다.
+            loadingSpinner.style.display = 'block';
+            placeholderText.style.display = 'none';
+            // 기존 카드들을 모두 제거합니다.
+            outputMainTitle.innerText = '';
+            cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
+
+
+            const systemPrompt = "You are a financial analyst and a creative writer. Based on the user's title, generate a four-card news summary. Each card must have a title, subtitle, and content. The tone should be friendly and easy to understand. The response must be a valid JSON object. Do not include any text outside the JSON block.";
+            
+            const prompt = `Based on the following title, generate a four-card news summary. Make the content engaging and concise. The response MUST be a valid JSON object with the following structure: { "mainTitle": "string", "cards": [{ "title": "string", "subtitle": "string", "content": "string", "emoji": "string" }, ...] }. The content field can contain simple HTML tags like <b> for highlighting keywords. User title: "${userPrompt}"`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "mainTitle": { "type": "STRING" },
+                            "cards": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "title": { "type": "STRING" },
+                                        "subtitle": { "type": "STRING" },
+                                        "content": { "type": "STRING" },
+                                        "emoji": { "type": "STRING" }
+                                    },
+                                    "propertyOrdering": ["title", "subtitle", "content", "emoji"]
+                                }
+                            }
+                        },
+                        "propertyOrdering": ["mainTitle", "cards"]
+                    }
+                }
+            };
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+
+                const result = await response.json();
+                const jsonText = result.candidates[0].content.parts[0].text;
+                const parsedJson = JSON.parse(jsonText);
+                
+                outputMainTitle.innerText = parsedJson.mainTitle;
+                parsedJson.cards.forEach((card, index) => {
+                    const safeContent = card.content ? card.content.replace(/<.*?>/g, '') : '내용이 생성되지 않았습니다.';
+                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', safeContent);
+                });
+
+
+            } catch (error) {
+                console.error('Error generating card news:', error);
+                outputMainTitle.innerText = '카드뉴스 생성 실패';
+                cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해 주세요.</p>`;
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        };
+
+
+        let debounceTimeout;
+        mainTitleInput.addEventListener('input', () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(generateCardNews, 1500);
+        });
+        
+        document.addEventListener('DOMContentLoaded', generateCardNews);
+    </script>
+</body>
+</html>
