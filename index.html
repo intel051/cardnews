@@ -149,7 +149,10 @@
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center p-8">
-
+    <!-- PDF.js 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- Mammoth.js 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth.js/1.4.15/mammoth.browser.min.js"></script>
 
     <div class="container">
         <!-- 입력 섹션 -->
@@ -158,14 +161,22 @@
             <div class="input-group">
                 <label for="main-title" class="responsive-text-sm">카드뉴스 제목</label>
                 <div class="input-with-button">
-                    <!-- 여기에 API 키를 넣어주세요. -->
-                    <input type="text" id="main-title" placeholder="예: 아이폰17 발표 요약" value="">
+                    <input type="text" id="main-title" placeholder="예: 넷플릭스 1분기 실적" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
                         &#x2715; <!-- X 마크 -->
                     </button>
                 </div>
             </div>
-            <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하면 AI가 최대 20장까지 카드뉴스를 만들어요. (입력 후 잠시 기다려주세요)</p>
+            <p class="text-sm text-gray-500 text-center mt-4">또는</p>
+            <div class="input-group">
+                <label for="file-upload" class="responsive-text-sm">문서 파일(.pdf, .docx) 업로드</label>
+                <!-- PDF와 DOCX 파일만 선택되도록 수정했어요. -->
+                <input type="file" id="file-upload" accept="application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            </div>
+            <button id="reset-button" class="mt-4 w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors">
+                초기화
+            </button>
+            <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하거나 파일을 업로드하면 AI가 내용을 분석해 카드뉴스를 만들어요.</p>
         </div>
 
 
@@ -177,9 +188,8 @@
                 <h2 class="text-2xl md:text-3xl font-bold text-gray-700 mb-4">카드뉴스 사용법</h2>
                 <p class="mb-2 text-gray-600">이곳은 자동 생성 카드뉴스가 표시될 공간이에요. 사용법은 아주 간단해요!</p>
                 <p class="mb-2 text-gray-600">1. 위에 있는 입력 칸에 원하는 <b>카드뉴스 제목</b>을 입력하세요.</p>
-                <p class="mb-2 text-gray-600">2. 제목을 입력하고 잠시 기다리면, AI가 내용을 분석해 자동으로 멋진 카드뉴스를 만들어줄 거예요.</p>
-                <p class="mb-2 text-gray-600">3. 내용에 따라 <b>최대 20장</b>까지 생성돼요.</p>
-                <p class="text-gray-600 mt-4">예시: '넷플릭스 1분기 실적', '최신 AI 트렌드', '건강한 식습관 팁'</p>
+                <p class="mb-2 text-gray-600">2. 또는 <b>PDF(.pdf)</b>나 <b>워드(.docx)</b> 파일을 업로드하세요.</p>
+                <p class="mb-2 text-gray-600">3. 입력/업로드 후 잠시 기다리면, AI가 내용을 분석해 멋진 카드뉴스를 만들어줄 거예요.</p>
                 <p class="text-gray-600 font-bold mt-4">지금 바로 첫 번째 카드뉴스를 만들어보세요! 😊</p>
             </div>
         </div>
@@ -187,13 +197,19 @@
 
 
     <script>
+        // PDF.js worker 설정
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+
+
         // 발급받은 API 키를 여기에 넣어주세요!
         const apiKey = "AIzaSyA2hYnuaD9jwNEI0M6ZJW5FujwFcNPES14";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
 
         const mainTitleInput = document.getElementById('main-title');
+        const fileUploadInput = document.getElementById('file-upload');
         const clearButton = document.getElementById('clear-button');
+        const resetButton = document.getElementById('reset-button');
         const loadingSpinner = document.getElementById('loading-spinner');
         const cardNewsSection = document.getElementById('card-news-section');
         const outputMainTitle = document.getElementById('output-main-title');
@@ -226,7 +242,6 @@
                         return response;
                     }
                 } catch (error) {
-                    // Network errors can be temporary, so retry.
                     if (i === maxRetries - 1) throw error;
                 }
                 const delay = Math.pow(2, i) * 1000;
@@ -238,11 +253,12 @@
 
 
         const generateCardNews = async () => {
-            const userPrompt = mainTitleInput.value;
-            if (userPrompt.trim() === '') {
-                outputMainTitle.innerText = '';
-                cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
-                howToGuide.style.display = 'block';
+            const file = fileUploadInput.files[0];
+            const hasTextPrompt = mainTitleInput.value.trim() !== '';
+
+            if (!file && !hasTextPrompt) {
+                // 초기화 버튼을 누르거나, 입력 필드가 모두 비었을 때
+                resetApp();
                 return;
             }
 
@@ -252,37 +268,92 @@
                 return;
             }
 
-
             loadingSpinner.style.display = 'block';
             howToGuide.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
 
+            try {
+                let content = '';
+                if (file) {
+                    if (file.type === 'application/pdf') {
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            const typedarray = new Uint8Array(e.target.result);
+                            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+                            let pdfText = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                pdfText += textContent.items.map(item => item.str).join(' ');
+                            }
+                            processContentAndGenerate(pdfText, false);
+                        };
+                        reader.onerror = (e) => displayError("PDF 파일을 읽는 도중 오류가 발생했습니다.");
+                        reader.readAsArrayBuffer(file);
+                        return;
+                    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            const arrayBuffer = e.target.result;
+                            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                            const docxText = result.value;
+                            processContentAndGenerate(docxText, false);
+                        };
+                        reader.onerror = (e) => displayError("DOCX 파일을 읽는 도중 오류가 발생했습니다.");
+                        reader.readAsArrayBuffer(file);
+                        return;
+                    } else {
+                        throw new Error("지원하지 않는 파일 형식입니다. .pdf, .docx 파일을 업로드해주세요.");
+                    }
+                } else {
+                    processContentAndGenerate(mainTitleInput.value, true);
+                }
 
-            const summaryPrompt = `Provide a concise, detailed, and factual summary in Korean based on a Google search for the following topic: "${userPrompt}". Focus on key points and numbers.`;
+            } catch (error) {
+                console.error('Error generating card news:', error);
+                displayError(error.message);
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        };
+
+
+        const processContentAndGenerate = async (content, useSearch) => {
             const formatPrompt = (summary) => `You are a creative writer who specializes in creating content for card news based on provided information. Based on the following summary, create a card news with 4 to 20 slides. Each slide should have a title, subtitle, content, and an emoji. The content should be engaging and concise. Format the 'content' field for easy reading, using HTML line break tags like <br> or <p> for proper paragraph separation. The response MUST be a valid JSON object. Do not include any text outside the JSON block.
 Summary: ${summary}`;
 
             try {
-                // Step 1: Search and summarize
-                const summaryPayload = {
-                    contents: [{ parts: [{ text: summaryPrompt }] }],
-                    tools: [{ "google_search": {} }],
-                };
+                let summaryText = content;
+                let sources = [];
 
-                const summaryResponse = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(summaryPayload)
-                });
+                if (useSearch) {
+                    const summaryPayload = {
+                        contents: [{ parts: [{ text: `Provide a concise, detailed, and factual summary in Korean based on a Google search for the following topic: "${content}". Focus on key points and numbers."` }] }],
+                        tools: [{ "google_search": {} }],
+                    };
+                    const summaryResponse = await fetchWithRetry(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(summaryPayload)
+                    });
+                    const summaryResult = await summaryResponse.json();
+                    summaryText = summaryResult.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const groundingMetadata = summaryResult.candidates?.[0]?.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                         sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({
+                                uri: attribution.web?.uri,
+                                title: attribution.web?.title,
+                            }))
+                            .filter(source => source.uri && source.title);
+                    }
+                }
                 
-                const summaryResult = await summaryResponse.json();
-                const summaryText = summaryResult.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!summaryText) {
-                    throw new Error("Summary could not be generated from search results.");
+                    throw new Error("Summary could not be generated.");
                 }
 
-                // Step 2: Format summary into JSON
                 const formatPayload = {
                     contents: [{ parts: [{ text: formatPrompt(summaryText) }] }],
                     generationConfig: {
@@ -318,7 +389,6 @@ Summary: ${summary}`;
                 const formatResult = await formatResponse.json();
                 let jsonText = formatResult.candidates?.[0]?.content?.parts?.[0]?.text;
                 
-                // Robust JSON parsing
                 const jsonStartIndex = jsonText.indexOf('{');
                 const jsonEndIndex = jsonText.lastIndexOf('}');
                 if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
@@ -331,31 +401,53 @@ Summary: ${summary}`;
                 
                 outputMainTitle.innerText = parsedJson.mainTitle;
                 parsedJson.cards.forEach((card, index) => {
-                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.');
+                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.', sources);
                 });
 
             } catch (error) {
                 console.error('Error generating card news:', error);
-                outputMainTitle.innerText = '카드뉴스 생성 실패';
-                cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해 주세요. 만약 오류가 계속 발생하면, 다른 제목으로 시도해보세요. 오류 유형: ${error.message}</p>`;
+                displayError(error.message);
             } finally {
                 loadingSpinner.style.display = 'none';
             }
         };
 
+        const displayError = (message) => {
+            outputMainTitle.innerText = '카드뉴스 생성 실패';
+            cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해 주세요. 만약 오류가 계속 발생하면, 다른 제목으로 시도해보세요. 오류 유형: ${message}</p>`;
+        };
+
+        const resetApp = () => {
+            mainTitleInput.value = '';
+            fileUploadInput.value = '';
+            clearButton.style.display = 'none';
+            outputMainTitle.innerText = '';
+            cardNewsSection.innerHTML = '';
+            howToGuide.style.display = 'block';
+        };
 
         let debounceTimeout;
         mainTitleInput.addEventListener('input', () => {
             clearButton.style.display = mainTitleInput.value.length > 0 ? 'block' : 'none';
+            fileUploadInput.value = '';
             clearTimeout(debounceTimeout);
             debounceTimeout = setTimeout(generateCardNews, 1500);
+        });
+
+        fileUploadInput.addEventListener('change', () => {
+            mainTitleInput.value = '';
+            clearButton.style.display = 'none';
+            generateCardNews();
         });
 
         clearButton.addEventListener('click', () => {
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
+            fileUploadInput.value = '';
             generateCardNews();
         });
+
+        resetButton.addEventListener('click', resetApp);
         
         document.addEventListener('DOMContentLoaded', () => {
             howToGuide.style.display = 'block';
@@ -363,5 +455,4 @@ Summary: ${summary}`;
     </script>
 </body>
 </html>
-
 
