@@ -121,14 +121,14 @@
             border-radius: 1.5rem;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
             padding: clamp(1rem, 5vw, 2.5rem);
-            text-align: center;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            align-items: flex-start;
+            justify-content: flex-start;
             box-sizing: border-box;
+            text-align: left;
         }
         .card-number {
             position: absolute;
@@ -144,16 +144,19 @@
             font-weight: 700;
             color: #333;
             margin-bottom: 0.5rem;
+            text-align: left;
         }
         .card-subtitle {
             font-size: clamp(0.875rem, 3vw, 1rem);
             color: #666;
             margin-bottom: 1.5rem;
+            text-align: left;
         }
         .card-content {
             font-size: clamp(1rem, 3.5vw, 1.125rem);
             line-height: 1.6;
             color: #444;
+            text-align: left;
         }
         .stat-highlight {
             font-weight: 700;
@@ -162,6 +165,7 @@
         .emoji {
             font-size: clamp(2rem, 6vw, 2.5rem);
             margin-bottom: 1rem;
+            text-align: left;
         }
         .placeholder-text {
             color: #9ca3af;
@@ -181,6 +185,24 @@
             color: #6b7280;
             margin-top: 1rem;
             text-align: left;
+        }
+        .card .download-button {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 9999px;
+            padding: 0.5rem;
+            font-size: 1.25rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        .card:hover .download-button {
+            opacity: 1;
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -214,7 +236,7 @@
             </div>
             
             <div class="flex flex-col md:flex-row gap-4 mt-4">
-                <button id="reset-button" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors">
+                <button id="reset-button" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors" style="display:none;">
                     초기화
                 </button>
                 <button id="generate-button" class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-indigo-600 transition-colors">
@@ -239,9 +261,6 @@
             </div>
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth.js/1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
         const apiKey = "AIzaSyDfpal-sPS5EeCLYrvmeVnc_sA69L_EQ8M";
@@ -268,6 +287,9 @@
                     <p class="card-subtitle">${cardSubtitle}</p>
                     <div class="card-content">${cardContent}</div>
                     ${sources.length > 0 ? `<div class="source-text">출처: ${sources.map(s => `<a href="${s.uri}" target="_blank" class="text-blue-500 hover:underline">${s.title}</a>`).join(', ')}</div>` : ''}
+                    <button class="download-button" data-card-number="${cardNumber}" title="다운로드">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </button>
                 </div>
             `;
             const card = document.createElement('div');
@@ -307,6 +329,7 @@
             outputMainTitle.innerText = '';
             cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
             saveButton.style.display = 'none';
+            resetButton.style.display = 'none';
             try {
                 let content = '';
                 if (file) {
@@ -423,6 +446,7 @@ Summary: ${summary}`;
                 });
                 if (parsedJson.cards.length > 0) {
                     saveButton.style.display = 'block';
+                    resetButton.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Error generating card news:', error);
@@ -464,6 +488,7 @@ Summary: ${summary}`;
             fileUploadInput.value = '';
             clearButton.style.display = 'none';
             saveButton.style.display = 'none';
+            resetButton.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.innerHTML = '';
             howToGuide.style.display = 'block';
