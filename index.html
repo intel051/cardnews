@@ -387,6 +387,7 @@
             } catch (error) {
                 console.error('Error generating card news:', error);
                 displayError(error.message);
+            } finally {
                 loadingOverlay.style.display = 'none';
             }
         };
@@ -440,7 +441,7 @@ Summary: ${summary}`;
                 jsonText = jsonText.substring(jsonStartIndex, jsonEndIndex + 1);
                 const parsedJson = JSON.parse(jsonText);
                 
-                outputMainTitle.innerText = parsedJson.mainTitle;
+                outputMainTitle.innerText = removeEmojis(parsedJson.mainTitle);
                 parsedJson.cards.forEach((card, index) => {
                     createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.');
                 });
@@ -492,6 +493,9 @@ Summary: ${summary}`;
             outputMainTitle.innerText = '';
             cardNewsSection.innerHTML = '';
             howToGuide.style.display = 'block';
+        };
+        const removeEmojis = (str) => {
+            return str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{2B06}\u{2B07}\u{2B05}\u{2934}\u{2935}\u{25AA}\u{25AB}\u{25FD}\u{25FE}\u{25FB}\u{25FC}\u{25C0}\u{25B6}\u{25C1}\u{25B7}\u{24C2}\u{23E9}\u{23EA}\u{23CF}\u{23F8}\u{23F9}\u{23FA}\u{231B}\u{2328}\u{23EB}\u{23EC}\u{23F3}\u{23ED}\u{23EE}\u{23EF}\u{23F0}\u{23F1}\u{23F2}\u{23F4}\u{23F5}\u{23F6}\u{23F7}\u{2B50}\u{2B06}\u{2B07}\u{2B05}\u{2934}\u{2935}\u{25AA}\u{25AB}\u{25FD}\u{25FE}\u{25FB}\u{25FC}\u{25C0}\u{25B6}\u{25C1}\u{25B7}\u{24C2}\u{23E9}\u{23EA}\u{23CF}\u{23F8}\u{23F9}\u{23FA}\u{231B}\u{2328}\u{23EB}\u{23EC}\u{23F3}\u{23ED}\u{23EE}\u{23EF}\u{23F0}\u{23F1}\u{23F2}\u{23F4}\u{23F5}\u{23F6}\u{23F7}]/ug, '');
         };
         mainTitleInput.addEventListener('input', () => {
             clearButton.style.display = mainTitleInput.value.length > 0 ? 'block' : 'none';
