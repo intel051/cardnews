@@ -188,7 +188,7 @@
             <div class="input-group">
                 <label for="main-title" class="responsive-text-sm">카드뉴스 제목</label>
                 <div class="input-with-button">
-                    <input type="text" id="main-title" placeholder="예: 도쿄 맛집 TOP7" value="">
+                    <input type="text" id="main-title" placeholder="예: 넷플릭스 1분기 실적" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
                         &#x2715; <!-- X 마크 -->
                     </button>
@@ -205,6 +205,9 @@
                 </button>
                 <button id="save-button" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-blue-600 transition-colors" style="display:none;">
                     PNG로 저장
+                </button>
+                 <button id="version-button" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-600 transition-colors">
+                    버전2
                 </button>
             </div>
             <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하거나 파일을 업로드하면 AI가 내용을 분석해 카드뉴스를 만들어요.</p>
@@ -243,6 +246,7 @@
         const clearButton = document.getElementById('clear-button');
         const resetButton = document.getElementById('reset-button');
         const saveButton = document.getElementById('save-button');
+        const versionButton = document.getElementById('version-button');
         const loadingSpinner = document.getElementById('loading-spinner');
         const cardNewsSection = document.getElementById('card-news-section');
         const outputMainTitle = document.getElementById('output-main-title');
@@ -534,6 +538,10 @@ Summary: ${summary}`;
 
         saveButton.addEventListener('click', saveCardsAsPng);
         
+        versionButton.addEventListener('click', () => {
+            window.open('https://intel051.github.io/cardnews2/', '_blank');
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             howToGuide.style.display = 'block';
         });
