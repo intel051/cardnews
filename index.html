@@ -102,7 +102,6 @@
         }
         .file-upload-label {
             display: block;
-            width: 100%;
             padding: 0.75rem;
             border-radius: 0.5rem;
             border: 1px solid #d1d5db;
@@ -158,10 +157,6 @@
             color: #444;
             text-align: left;
         }
-        .stat-highlight {
-            font-weight: 700;
-            color: #2563eb;
-        }
         .emoji {
             font-size: clamp(2rem, 6vw, 2.5rem);
             margin-bottom: 1rem;
@@ -171,20 +166,6 @@
             color: #9ca3af;
             text-align: center;
             font-size: clamp(1rem, 3.5vw, 1.25rem);
-        }
-        .responsive-text-sm {
-            font-size: 0.875rem;
-        }
-        @media (min-width: 768px) {
-            .responsive-text-sm {
-                font-size: 1rem;
-            }
-        }
-        .source-text {
-            font-size: 0.75rem;
-            color: #6b7280;
-            margin-top: 1rem;
-            text-align: left;
         }
         .card .download-button {
             position: absolute;
@@ -211,14 +192,11 @@
         <div class="loader"></div>
     </div>
     <div class="container">
-        <button id="version-button" class="absolute top-4 right-4 bg-gray-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-600 transition-colors text-sm md:top-8 md:right-8">
-            버전2
-        </button>
-
         <div class="input-section">
             <h2 class="text-2xl font-bold mb-4 text-center">카드뉴스 생성기</h2>
             <div class="input-group">
-                <label for="main-title" class="responsive-text-sm">1. 카드뉴스 키워드 입력</label>
+                <!-- "구글 검색 기반" 문구 삭제 -->
+                <label for="main-title" class="font-bold text-gray-600">1. 카드뉴스 키워드 입력</label>
                 <div class="input-with-button">
                     <input type="text" id="main-title" placeholder="예: 시부야 맛집 TOP7" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
@@ -226,16 +204,19 @@
                     </button>
                 </div>
             </div>
-            <p class="text-sm text-gray-500 text-left mt-4 font-bold">2. 또는 파일 업로드(.pdf, .docx)</p>
-            <div class="input-group">
-                <input type="file" id="file-upload" accept="application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display: none;">
-                <label for="file-upload" id="file-upload-label" class="file-upload-label">
-                    파일 선택
-                </label>
-                <p id="file-name" class="text-sm text-gray-500 mt-2"></p>
+            <!-- 파일 업로드 섹션 디자인 수정 -->
+            <div class="mt-6">
+                <p class="text-sm text-gray-500 text-left font-bold">2. 또는 파일 업로드(.pdf, .docx)</p>
+                <div class="mt-2">
+                    <input type="file" id="file-upload" accept="application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display: none;">
+                    <label for="file-upload" id="file-upload-label" class="file-upload-label md:w-2/3 lg:w-1/2 mx-auto">
+                        파일 선택
+                    </label>
+                    <p id="file-name" class="text-sm text-gray-500 mt-2 text-center"></p>
+                </div>
             </div>
             
-            <div class="flex flex-col md:flex-row gap-4 mt-4">
+            <div class="flex flex-col md:flex-row gap-4 mt-8">
                 <button id="reset-button" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors" style="display:none;">
                     초기화
                 </button>
@@ -263,264 +244,277 @@
     </div>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
-        const apiKey = "AIzaSyDfpal-sPS5EeCLYrvmeVnc_sA69L_EQ8M";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        
+        const apiKey = "AIzaSyDfpal-sPS5EeCLYrvmeVnc_sA69L_EQ8M"; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        
         const mainTitleInput = document.getElementById('main-title');
         const fileUploadInput = document.getElementById('file-upload');
-        const fileUploadLabel = document.getElementById('file-upload-label');
         const fileNameDisplay = document.getElementById('file-name');
         const clearButton = document.getElementById('clear-button');
         const resetButton = document.getElementById('reset-button');
         const generateButton = document.getElementById('generate-button');
         const saveButton = document.getElementById('save-button');
-        const versionButton = document.getElementById('version-button');
         const loadingOverlay = document.getElementById('loading-overlay');
         const cardNewsSection = document.getElementById('card-news-section');
         const outputMainTitle = document.getElementById('output-main-title');
         const howToGuide = document.getElementById('how-to-guide');
-        const createCard = (cardNumber, emoji, cardTitle, cardSubtitle, cardContent, sources = []) => {
-            const cardHtml = `
-                <div class="card">
-                    <div class="card-number">${cardNumber}</div>
-                    <div class="emoji">${emoji}</div>
-                    <h2 class="card-title">${cardTitle}</h2>
-                    <p class="card-subtitle">${cardSubtitle}</p>
-                    <div class="card-content">${cardContent}</div>
-                    ${sources.length > 0 ? `<div class="source-text">출처: ${sources.map(s => `<a href="${s.uri}" target="_blank" class="text-blue-500 hover:underline">${s.title}</a>`).join(', ')}</div>` : ''}
-                    <button class="download-button" data-card-number="${cardNumber}" title="다운로드">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                    </button>
-                </div>
-            `;
+
+        const createCard = (cardNumber, emoji, cardTitle, cardSubtitle, cardContent) => {
             const card = document.createElement('div');
-            card.innerHTML = cardHtml;
-            cardNewsSection.appendChild(card.firstElementChild);
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-number">${cardNumber}</div>
+                <div class="emoji">${emoji}</div>
+                <h2 class="card-title">${cardTitle}</h2>
+                <p class="card-subtitle">${cardSubtitle}</p>
+                <div class="card-content">${cardContent}</div>
+                <button class="download-button" data-card-number="${cardNumber}" title="다운로드">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                </button>
+            `;
+            cardNewsSection.appendChild(card);
         };
-        const fetchWithRetry = async (url, options, maxRetries = 5) => {
+
+        const fetchWithRetry = async (url, options, maxRetries = 3) => {
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const response = await fetch(url, options);
-                    if (response.status !== 503) {
-                        return response;
+                    if (response.ok) return response;
+                    if (response.status === 429 || response.status === 503) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        console.log(`Retrying after ${delay.toFixed(0)}ms...`);
+                        await new Promise(res => setTimeout(res, delay));
+                        continue;
                     }
+                    throw new Error(`API Error ${response.status}: ${await response.text()}`);
                 } catch (error) {
                     if (i === maxRetries - 1) throw error;
                 }
-                const delay = Math.pow(2, i) * 1000;
-                console.log(`Retrying after ${delay / 1000} seconds...`);
-                await new Promise(res => setTimeout(res, delay));
             }
             throw new Error(`Failed to fetch after ${maxRetries} retries.`);
         };
+
         const generateCardNews = async () => {
             const file = fileUploadInput.files[0];
             const hasTextPrompt = mainTitleInput.value.trim() !== '';
+
             if (!file && !hasTextPrompt) {
                 resetApp();
                 return;
             }
-            if (apiKey === "") {
-                outputMainTitle.innerText = 'API 키가 필요합니다.';
-                cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">Google AI Studio에서 API 키를 발급받아 코드에 붙여넣어 주세요.</p>`;
+            if (!apiKey) {
+                displayError("Gemini API 키가 비어있습니다. 코드 상단의 apiKey 변수에 키를 입력해주세요.");
                 return;
             }
+
             loadingOverlay.style.display = 'flex';
             howToGuide.style.display = 'none';
+            cardNewsSection.innerHTML = '';
             outputMainTitle.innerText = '';
-            cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
             saveButton.style.display = 'none';
             resetButton.style.display = 'none';
+            
             try {
-                let content = '';
                 if (file) {
-                    if (file.type === 'application/pdf') {
-                        const reader = new FileReader();
-                        reader.onload = async (e) => {
-                            try {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            let textContent = '';
+                            if (file.type === 'application/pdf') {
                                 const typedarray = new Uint8Array(e.target.result);
                                 const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-                                let pdfText = '';
                                 for (let i = 1; i <= pdf.numPages; i++) {
                                     const page = await pdf.getPage(i);
-                                    const textContent = await page.getTextContent();
-                                    pdfText += textContent.items.map(item => item.str).join(' ');
+                                    const content = await page.getTextContent();
+                                    textContent += content.items.map(item => item.str).join(' ');
                                 }
-                                await processContentAndGenerate(pdfText);
-                            } catch (error) {
-                                displayError("PDF 파일을 읽는 도중 오류가 발생했습니다.");
-                            } finally {
-                                loadingOverlay.style.display = 'none';
+                            } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                                const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+                                textContent = result.value;
                             }
-                        };
-                        reader.onerror = (e) => {
-                            displayError("PDF 파일을 읽는 도중 오류가 발생했습니다.");
+                            await processContentAndGenerate(textContent, false);
+                        } catch (error) {
+                            displayError(error.message);
+                        } finally {
                             loadingOverlay.style.display = 'none';
-                        };
-                        reader.readAsArrayBuffer(file);
-                        return;
-                    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                        const reader = new FileReader();
-                        reader.onload = async (e) => {
-                            try {
-                                const arrayBuffer = e.target.result;
-                                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-                                const docxText = result.value;
-                                await processContentAndGenerate(docxText);
-                            } catch (error) {
-                                displayError("DOCX 파일을 읽는 도중 오류가 발생했습니다.");
-                            } finally {
-                                loadingOverlay.style.display = 'none';
-                            }
-                        };
-                        reader.onerror = (e) => {
-                            displayError("DOCX 파일을 읽는 도중 오류가 발생했습니다.");
-                            loadingOverlay.style.display = 'none';
-                        };
-                        reader.readAsArrayBuffer(file);
-                        return;
-                    } else {
-                        throw new Error("지원하지 않는 파일 형식입니다. .pdf, .docx 파일을 업로드해주세요.");
-                    }
+                        }
+                    };
+                    reader.onerror = () => {
+                        displayError("파일을 읽는 중 오류가 발생했습니다.");
+                        loadingOverlay.style.display = 'none';
+                    };
+                    reader.readAsArrayBuffer(file);
                 } else {
-                    await processContentAndGenerate(mainTitleInput.value);
+                     await processContentAndGenerate(mainTitleInput.value, true);
+                     loadingOverlay.style.display = 'none';
                 }
             } catch (error) {
-                console.error('Error generating card news:', error);
                 displayError(error.message);
                 loadingOverlay.style.display = 'none';
             }
         };
-        const processContentAndGenerate = async (content) => {
-            const formatPrompt = (summary) => `You are a creative writer who specializes in creating content for card news based on provided information. Based on the following summary, create a card news with 4 to 20 slides. Each slide should have a title, subtitle, content, and an emoji. The content should be engaging and concise. Format the 'content' field for easy reading, using HTML line break tags like <br> or <p> for proper paragraph separation. The response MUST be a valid JSON object. Do not include any text outside the JSON block.
-Summary: ${summary}`;
-            try {
-                const formatPayload = {
-                    contents: [{ parts: [{ text: formatPrompt(content) }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                "mainTitle": { "type": "STRING" },
-                                "cards": {
-                                    "type": "ARRAY",
-                                    "items": {
-                                        "type": "OBJECT",
-                                        "properties": {
-                                            "title": { "type": "STRING" },
-                                            "subtitle": { "type": "STRING" },
-                                            "content": { "type": "STRING" },
-                                            "emoji": { "type": "STRING" }
-                                        },
-                                        "propertyOrdering": ["title", "subtitle", "content", "emoji"]
-                                    }
+
+        const processContentAndGenerate = async (content, useSearch) => {
+            const payload = { contents: [] };
+            let promptText = '';
+
+            if (useSearch) {
+                promptText = `You are a creative writer.
+1. Perform a Google search for "${content}".
+2. Based on the search results, create 4 to 10 engaging card news slides.
+3. Your response MUST be a single, valid JSON object and nothing else. Do not add any text, explanations, or markdown formatting before or after the JSON block.
+The JSON structure MUST follow this exact format:
+{
+  "mainTitle": "Main Title About the Topic",
+  "cards": [
+    { "title": "Card 1 Title", "subtitle": "An engaging subtitle", "content": "Detailed content for card 1 with <br> breaks.", "emoji": "💡" },
+    { "title": "Card 2 Title", "subtitle": "Another subtitle", "content": "Content for card 2.", "emoji": "🚀" }
+  ]
+}`;
+                payload.tools = [{ "google_search": {} }];
+            } else {
+                promptText = `You are a creative writer. Based on the following summary, create 4 to 20 card news slides. Each slide needs a title, subtitle, content, and an emoji. Use <br> or <p> tags for line breaks in the content. The response MUST be a valid JSON object only.
+Summary: ${content}`;
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "mainTitle": { "type": "STRING" },
+                            "cards": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "title": { "type": "STRING" },
+                                        "subtitle": { "type": "STRING" },
+                                        "content": { "type": "STRING" },
+                                        "emoji": { "type": "STRING" }
+                                    },
+                                    "required": ["title", "subtitle", "content", "emoji"]
                                 }
-                            },
-                            "propertyOrdering": ["mainTitle", "cards"]
-                        }
+                            }
+                        },
+                        "required": ["mainTitle", "cards"]
                     }
                 };
-                const formatResponse = await fetchWithRetry(apiUrl, {
+            }
+            
+            payload.contents.push({ parts: [{ text: promptText }] });
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formatPayload)
+                    body: JSON.stringify(payload)
                 });
+                const result = await response.json();
                 
-                const formatResult = await formatResponse.json();
-                let jsonText = formatResult.candidates?.[0]?.content?.parts?.[0]?.text;
-                
-                if (!jsonText || typeof jsonText !== 'string' || jsonText.trim().length === 0) {
-                    throw new Error("API response does not contain valid text content.");
+                let jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) {
+                    throw new Error("API 응답에서 유효한 텍스트를 찾을 수 없습니다.");
                 }
-                const jsonStartIndex = jsonText.indexOf('{');
-                const jsonEndIndex = jsonText.lastIndexOf('}');
-                if (jsonStartIndex === -1 || jsonEndIndex === -1) {
-                    throw new Error("API response does not contain a valid JSON object.");
-                }
-                jsonText = jsonText.substring(jsonStartIndex, jsonEndIndex + 1);
+
+                jsonText = jsonText.replace(/^```(json)?\s*|```\s*$/g, '').trim();
+
                 const parsedJson = JSON.parse(jsonText);
+                outputMainTitle.innerText = parsedJson.mainTitle || "제목 없음";
                 
-                outputMainTitle.innerText = parsedJson.mainTitle;
+                if (!parsedJson.cards || parsedJson.cards.length === 0) {
+                     throw new Error("생성된 카드 데이터가 없습니다.");
+                }
+
                 parsedJson.cards.forEach((card, index) => {
                     createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.');
                 });
+
                 if (parsedJson.cards.length > 0) {
                     saveButton.style.display = 'block';
                     resetButton.style.display = 'block';
                 }
             } catch (error) {
-                console.error('Error generating card news:', error);
-                displayError(error.message);
-            } finally {
-                loadingOverlay.style.display = 'none';
+                displayError(`데이터 처리 중 오류: ${error.message}`);
             }
         };
+
         const saveCardsAsPng = async () => {
             const cards = document.querySelectorAll('.card');
             if (cards.length === 0) return;
-            const originalButtonText = saveButton.textContent;
             saveButton.textContent = '저장 중...';
             saveButton.disabled = true;
-            const promises = Array.from(cards).map((card, index) => {
-                return new Promise((resolve) => {
-                    html2canvas(card, {
-                        backgroundColor: '#ffffff',
-                        scale: 2
-                    }).then(canvas => {
-                        const link = document.createElement('a');
-                        link.download = `카드뉴스_${index + 1}.png`;
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                        resolve();
-                    });
-                });
-            });
-            await Promise.all(promises);
-            saveButton.textContent = originalButtonText;
+            for (const card of Array.from(cards)) {
+                try {
+                    const canvas = await html2canvas(card, { backgroundColor: '#ffffff', scale: 2 });
+                    const link = document.createElement('a');
+                    link.download = `카드뉴스_${card.dataset.cardNumber}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } catch(err) { console.error('PNG 저장 오류:', err); }
+            }
+            saveButton.textContent = 'PNG로 저장';
             saveButton.disabled = false;
         };
+
         const displayError = (message) => {
             outputMainTitle.innerText = '카드뉴스 생성 실패';
-            cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해 주세요. 만약 오류가 계속 발생하면, 다른 제목으로 시도해보세요. 오류 유형: ${message}</p>`;
+            cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">오류가 발생했습니다: ${message}<br>잠시 후 다른 키워드로 다시 시도해 주세요.</p>`;
         };
+
         const resetApp = () => {
             mainTitleInput.value = '';
             fileUploadInput.value = '';
+            fileNameDisplay.innerText = '';
             clearButton.style.display = 'none';
             saveButton.style.display = 'none';
             resetButton.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.innerHTML = '';
+            cardNewsSection.appendChild(howToGuide);
             howToGuide.style.display = 'block';
         };
+        
         mainTitleInput.addEventListener('input', () => {
             clearButton.style.display = mainTitleInput.value.length > 0 ? 'block' : 'none';
-            fileNameDisplay.innerText = '';
-            fileUploadInput.value = '';
+            if (fileUploadInput.value) {
+                fileNameDisplay.innerText = '';
+                fileUploadInput.value = '';
+            }
         });
+
         fileUploadInput.addEventListener('change', () => {
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
-            if (fileUploadInput.files.length > 0) {
-                fileNameDisplay.innerText = fileUploadInput.files[0].name;
-            } else {
-                fileNameDisplay.innerText = '';
-            }
+            fileNameDisplay.innerText = fileUploadInput.files.length > 0 ? fileUploadInput.files[0].name : '';
         });
-        clearButton.addEventListener('click', () => {
-            mainTitleInput.value = '';
-            clearButton.style.display = 'none';
-            fileNameDisplay.innerText = '';
-        });
+
+        clearButton.addEventListener('click', () => { mainTitleInput.value = ''; clearButton.style.display = 'none'; });
         resetButton.addEventListener('click', resetApp);
         generateButton.addEventListener('click', generateCardNews);
         saveButton.addEventListener('click', saveCardsAsPng);
-        versionButton.addEventListener('click', () => {
-            window.open('https://intel051.github.io/cardnews2/', '_blank');
+
+        cardNewsSection.addEventListener('click', (e) => {
+            const button = e.target.closest('.download-button');
+            if (button) {
+                const card = button.closest('.card');
+                html2canvas(card, { backgroundColor: '#ffffff', scale: 2 }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `카드뉴스_${card.dataset.cardNumber}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }
         });
+        
         document.addEventListener('DOMContentLoaded', () => {
-            howToGuide.style.display = 'block';
+            // howToGuide가 cardNewsSection에 없으면 추가
+            if (!cardNewsSection.contains(howToGuide)) {
+                 cardNewsSection.appendChild(howToGuide);
+            }
         });
     </script>
 </body>
 </html>
+
+
