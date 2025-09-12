@@ -9,36 +9,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        @font-face {
-            font-family: 'Pretendard';
-            font-style: normal;
-            font-weight: 400;
-            src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.6/dist/web/static/pretendard-regular.woff2) format('woff2');
-        }
-        @font-face {
-            font-family: 'Pretendard';
-            font-style: normal;
-            font-weight: 700;
-            src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.6/dist/web/static/pretendard-bold.woff2) format('woff2');
-        }
-
         html, body {
-            font-family: 'Pretendard', sans-serif !important;
+            font-family: 'Pretendard', sans-serif;
             background-color: #f0f2f5;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 1rem;
+            padding: 1rem; /* 여백을 줄여서 화면을 더 넓게 사용 */
             box-sizing: border-box;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow-x: hidden; /* 좌우 스크롤 방지 */
         }
-
-        /* 모든 텍스트 관련 요소에 Pretendard 폰트 적용 */
-        h1, h2, h3, h4, h5, h6, p, a, div, span, label, input, button, textarea {
-            font-family: 'Pretendard', sans-serif !important;
-        }
-
         .container {
             width: 100%;
             max-width: 1200px;
@@ -103,6 +84,7 @@
             align-items: center;
             justify-content: center;
             box-sizing: border-box;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .card-number {
             position: absolute;
@@ -118,16 +100,19 @@
             font-weight: 700;
             color: #333;
             margin-bottom: 0.5rem;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .card-subtitle {
             font-size: clamp(0.875rem, 3vw, 1rem);
             color: #666;
             margin-bottom: 1.5rem;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .card-content {
             font-size: clamp(1rem, 3.5vw, 1.125rem);
             line-height: 1.6;
             color: #444;
+            font-family: inherit; /* 폰트 상속 강제 적용 */
         }
         .stat-highlight {
             font-weight: 700;
@@ -170,6 +155,9 @@
             margin-top: 1rem;
             text-align: left;
         }
+        #output-main-title {
+            font-family: inherit; /* 폰트 상속 강제 적용 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center p-8">
@@ -188,7 +176,7 @@
             <div class="input-group">
                 <label for="main-title" class="responsive-text-sm">카드뉴스 제목</label>
                 <div class="input-with-button">
-                    <input type="text" id="main-title" placeholder="예: 도쿄 지하철패스 요약" value="">
+                    <input type="text" id="main-title" placeholder="예: 시부야 맛집 Top7" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
                         &#x2715; <!-- X 마크 -->
                     </button>
@@ -554,6 +542,7 @@ Summary: ${summary}`;
 
         resetButton.addEventListener('click', () => {
             resetApp();
+            // 초기화 후 다시 생성할 때 스피너를 위해 debounce를 초기화
             clearTimeout(debounceTimeout);
         });
 
@@ -566,5 +555,4 @@ Summary: ${summary}`;
     </script>
 </body>
 </html>
-
 
