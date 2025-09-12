@@ -5,25 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>자동 생성 카드뉴스</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth.js/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        @font-face {
-            font-family: 'Pretendard';
-            font-style: normal;
-            font-weight: 400;
-            src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.6/dist/web/static/pretendard-regular.woff2) format('woff2');
-        }
-        @font-face {
-            font-family: 'Pretendard';
-            font-style: normal;
-            font-weight: 700;
-            src: url(https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.6/dist/web/static/pretendard-bold.woff2) format('woff2');
-        }
-
-        html, body {
-            font-family: 'Pretendard', sans-serif !important;
+        body {
+            font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             background-color: #f0f2f5;
             display: flex;
             flex-direction: column;
@@ -34,12 +22,26 @@
             overflow-x: hidden;
         }
 
-        /* 모든 텍스트 관련 요소에 Pretendard 폰트 적용 */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loader {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Pretendard 폰트 적용 */
         h1, h2, h3, h4, h5, h6, p, a, div, span, label, input, button, textarea {
-            font-family: 'Pretendard', sans-serif !important;
+            font-family: "Pretendard", sans-serif !important;
         }
 
         .container {
+            position: relative;
             width: 100%;
             max-width: 1200px;
             display: flex;
@@ -89,6 +91,22 @@
             cursor: pointer;
             font-size: 1.25rem;
             padding: 0.25rem;
+        }
+        .file-upload-label {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            color: #4b5563;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .file-upload-label:hover {
+            background-color: #f3f4f6;
+            border-color: #9ca3af;
         }
         .card {
             background-color: white;
@@ -173,87 +191,76 @@
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center p-8">
-    <!-- PDF.js 라이브러리 추가 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <!-- Mammoth.js 라이브러리 추가 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth.js/1.4.15/mammoth.browser.min.js"></script>
-    <!-- html2canvas 라이브러리 추가 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-
     <div class="container">
-        <!-- 입력 섹션 -->
+        <!-- 버전2 버튼 -->
+        <button id="version-button" class="absolute top-4 right-4 bg-gray-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-600 transition-colors text-sm">
+            버전2
+        </button>
+
         <div class="input-section">
             <h2 class="text-2xl font-bold mb-4 text-center">카드뉴스 생성기</h2>
             <div class="input-group">
-                <label for="main-title" class="responsive-text-sm">카드뉴스 제목</label>
+                <label for="main-title" class="responsive-text-sm">1. 카드뉴스 키워드 입력</label>
                 <div class="input-with-button">
-                    <input type="text" id="main-title" placeholder="예: 넷플릭스 1분기 실적" value="">
+                    <input type="text" id="main-title" placeholder="예: 시부야 맛집 TOP7" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
                         &#x2715; <!-- X 마크 -->
                     </button>
                 </div>
             </div>
-            <p class="text-sm text-gray-500 text-center mt-4">또는</p>
+            <p class="text-sm text-gray-500 text-left mt-4">2. 또는 파일 업로드(.pdf, .docx)</p>
             <div class="input-group">
-                <label for="file-upload" class="responsive-text-sm">문서 파일(.pdf, .docx) 업로드</label>
-                <input type="file" id="file-upload" accept="application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                <input type="file" id="file-upload" accept="application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display: none;">
+                <label for="file-upload" id="file-upload-label" class="file-upload-label">
+                    파일 선택
+                </label>
+                <p id="file-name" class="text-sm text-gray-500 mt-2"></p>
             </div>
+            
             <div class="flex flex-col md:flex-row gap-4 mt-4">
                 <button id="reset-button" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-600 transition-colors">
                     초기화
                 </button>
+                <button id="generate-button" class="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-indigo-600 transition-colors">
+                    <span class="flex items-center justify-center gap-2">
+                         <span class="text-xl">🚀</span> 카드 생성하기
+                    </span>
+                </button>
                 <button id="save-button" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-blue-600 transition-colors" style="display:none;">
                     PNG로 저장
                 </button>
-                 <button id="version-button" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-600 transition-colors">
-                    버전2
-                </button>
             </div>
-            <p class="text-sm text-gray-500 text-center mt-4">제목을 입력하거나 파일을 업로드하면 AI가 내용을 분석해 카드뉴스를 만들어요.</p>
         </div>
-
-
-        <!-- 카드뉴스 섹션 -->
         <div id="card-news-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="loading-spinner" id="loading-spinner"></div>
+            <div class="loader" id="loading-spinner" style="display: none;"></div>
             <h1 id="output-main-title" class="text-3xl font-bold text-center text-gray-800 mb-4 col-span-full"></h1>
             <div id="how-to-guide" class="placeholder-text col-span-full p-8 md:p-12">
                 <h2 class="text-2xl md:text-3xl font-bold text-gray-700 mb-4">카드뉴스 사용법</h2>
                 <p class="mb-2 text-gray-600">이곳은 자동 생성 카드뉴스가 표시될 공간이에요. 사용법은 아주 간단해요!</p>
-                <p class="mb-2 text-gray-600">1. 위에 있는 입력 칸에 원하는 <b>카드뉴스 제목</b>을 입력하세요.</p>
+                <p class="mb-2 text-gray-600">1. 위에 있는 입력 칸에 원하는 <b>카드뉴스 키워드</b>를 입력하세요.</p>
                 <p class="mb-2 text-gray-600">2. 또는 <b>PDF(.pdf)</b>나 <b>워드(.docx)</b> 파일을 업로드하세요.</p>
-                <p class="mb-2 text-gray-600">3. 입력/업로드 후 잠시 기다리면, AI가 내용을 분석해 멋진 카드뉴스를 만들어줄 거예요.</p>
+                <p class="mb-2 text-gray-600">3. 입력/업로드 후 <b>'카드 생성하기'</b> 버튼을 누르면 멋진 카드뉴스가 만들어져요.</p>
                 <p class="text-gray-600 font-bold mt-4">지금 바로 첫 번째 카드뉴스를 만들어보세요! 😊</p>
             </div>
         </div>
     </div>
-
-
     <script>
-        // PDF.js worker 설정
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
-
-
-        // 발급받은 API 키를 여기에 넣어주세요!
         const apiKey = "AIzaSyDfpal-sPS5EeCLYrvmeVnc_sA69L_EQ8M";
-        // 이 앱에 최적화된, 빠르고 안정적인 Gemini Flash 모델을 사용합니다.
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-
         const mainTitleInput = document.getElementById('main-title');
         const fileUploadInput = document.getElementById('file-upload');
+        const fileUploadLabel = document.getElementById('file-upload-label');
+        const fileNameDisplay = document.getElementById('file-name');
         const clearButton = document.getElementById('clear-button');
         const resetButton = document.getElementById('reset-button');
+        const generateButton = document.getElementById('generate-button');
         const saveButton = document.getElementById('save-button');
         const versionButton = document.getElementById('version-button');
         const loadingSpinner = document.getElementById('loading-spinner');
         const cardNewsSection = document.getElementById('card-news-section');
         const outputMainTitle = document.getElementById('output-main-title');
         const howToGuide = document.getElementById('how-to-guide');
-
-
-        // 카드 생성 및 추가 함수
         const createCard = (cardNumber, emoji, cardTitle, cardSubtitle, cardContent, sources = []) => {
             const cardHtml = `
                 <div class="card">
@@ -269,9 +276,7 @@
             card.innerHTML = cardHtml;
             cardNewsSection.appendChild(card.firstElementChild);
         };
-
-
-        const fetchWithRetry = async (url, options, maxRetries = 5) => { // 재시도 횟수를 5회로 늘림
+        const fetchWithRetry = async (url, options, maxRetries = 5) => {
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const response = await fetch(url, options);
@@ -287,30 +292,23 @@
             }
             throw new Error(`Failed to fetch after ${maxRetries} retries.`);
         };
-
-
         const generateCardNews = async () => {
             const file = fileUploadInput.files[0];
             const hasTextPrompt = mainTitleInput.value.trim() !== '';
-
             if (!file && !hasTextPrompt) {
                 resetApp();
                 return;
             }
-
             if (apiKey === "") {
                 outputMainTitle.innerText = 'API 키가 필요합니다.';
                 cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">Google AI Studio에서 API 키를 발급받아 코드에 붙여넣어 주세요.</p>`;
                 return;
             }
-
             loadingSpinner.style.display = 'block';
             howToGuide.style.display = 'none';
             outputMainTitle.innerText = '';
             cardNewsSection.querySelectorAll('.card').forEach(card => card.remove());
             saveButton.style.display = 'none';
-
-
             try {
                 let content = '';
                 if (file) {
@@ -371,12 +369,9 @@
                 loadingSpinner.style.display = 'none';
             }
         };
-
-
         const processContentAndGenerate = async (content) => {
             const formatPrompt = (summary) => `You are a creative writer who specializes in creating content for card news based on provided information. Based on the following summary, create a card news with 4 to 20 slides. Each slide should have a title, subtitle, content, and an emoji. The content should be engaging and concise. Format the 'content' field for easy reading, using HTML line break tags like <br> or <p> for proper paragraph separation. The response MUST be a valid JSON object. Do not include any text outside the JSON block.
 Summary: ${summary}`;
-
             try {
                 const formatPayload = {
                     contents: [{ parts: [{ text: formatPrompt(content) }] }],
@@ -416,25 +411,21 @@ Summary: ${summary}`;
                 if (!jsonText || typeof jsonText !== 'string' || jsonText.trim().length === 0) {
                     throw new Error("API response does not contain valid text content.");
                 }
-
                 const jsonStartIndex = jsonText.indexOf('{');
                 const jsonEndIndex = jsonText.lastIndexOf('}');
                 if (jsonStartIndex === -1 || jsonEndIndex === -1) {
                     throw new Error("API response does not contain a valid JSON object.");
                 }
                 jsonText = jsonText.substring(jsonStartIndex, jsonEndIndex + 1);
-
                 const parsedJson = JSON.parse(jsonText);
                 
                 outputMainTitle.innerText = parsedJson.mainTitle;
                 parsedJson.cards.forEach((card, index) => {
                     createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.');
                 });
-
                 if (parsedJson.cards.length > 0) {
                     saveButton.style.display = 'block';
                 }
-
             } catch (error) {
                 console.error('Error generating card news:', error);
                 displayError(error.message);
@@ -442,22 +433,17 @@ Summary: ${summary}`;
                 loadingSpinner.style.display = 'none';
             }
         };
-
-
-        // PNG로 저장하는 함수
         const saveCardsAsPng = async () => {
             const cards = document.querySelectorAll('.card');
             if (cards.length === 0) return;
-
             const originalButtonText = saveButton.textContent;
             saveButton.textContent = '저장 중...';
             saveButton.disabled = true;
-
             const promises = Array.from(cards).map((card, index) => {
                 return new Promise((resolve) => {
                     html2canvas(card, {
                         backgroundColor: '#ffffff',
-                        scale: 2 // 고해상도 이미지 생성을 위해 스케일 2배 적용
+                        scale: 2
                     }).then(canvas => {
                         const link = document.createElement('a');
                         link.download = `카드뉴스_${index + 1}.png`;
@@ -467,20 +453,14 @@ Summary: ${summary}`;
                     });
                 });
             });
-
             await Promise.all(promises);
-
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
         };
-
-
         const displayError = (message) => {
             outputMainTitle.innerText = '카드뉴스 생성 실패';
             cardNewsSection.innerHTML = `<p class="placeholder-text text-red-500 col-span-full">카드뉴스 생성 중 오류가 발생했습니다. 다시 시도해 주세요. 만약 오류가 계속 발생하면, 다른 제목으로 시도해보세요. 오류 유형: ${message}</p>`;
         };
-
-
         const resetApp = () => {
             mainTitleInput.value = '';
             fileUploadInput.value = '';
@@ -490,58 +470,31 @@ Summary: ${summary}`;
             cardNewsSection.innerHTML = '';
             howToGuide.style.display = 'block';
         };
-
-
-        let debounceTimeout;
         mainTitleInput.addEventListener('input', () => {
             clearButton.style.display = mainTitleInput.value.length > 0 ? 'block' : 'none';
+            fileNameDisplay.innerText = '';
             fileUploadInput.value = '';
-            clearTimeout(debounceTimeout);
-            if (mainTitleInput.value.trim() !== '') {
-                loadingSpinner.style.display = 'block';
-                howToGuide.style.display = 'none';
-                debounceTimeout = setTimeout(() => {
-                    generateCardNews();
-                }, 1500);
-            } else {
-                resetApp();
-            }
         });
-
-
         fileUploadInput.addEventListener('change', () => {
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
             if (fileUploadInput.files.length > 0) {
-                 loadingSpinner.style.display = 'block';
-                 howToGuide.style.display = 'none';
-                 generateCardNews();
+                fileNameDisplay.innerText = fileUploadInput.files[0].name;
             } else {
-                resetApp();
+                fileNameDisplay.innerText = '';
             }
         });
-
-
         clearButton.addEventListener('click', () => {
             mainTitleInput.value = '';
             clearButton.style.display = 'none';
-            fileUploadInput.value = '';
-            resetApp();
+            fileNameDisplay.innerText = '';
         });
-
-
-        resetButton.addEventListener('click', () => {
-            resetApp();
-            clearTimeout(debounceTimeout);
-        });
-
-
+        resetButton.addEventListener('click', resetApp);
+        generateButton.addEventListener('click', generateCardNews);
         saveButton.addEventListener('click', saveCardsAsPng);
-        
         versionButton.addEventListener('click', () => {
             window.open('https://intel051.github.io/cardnews2/', '_blank');
         });
-
         document.addEventListener('DOMContentLoaded', () => {
             howToGuide.style.display = 'block';
         });
