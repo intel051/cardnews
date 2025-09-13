@@ -198,7 +198,7 @@
                 <!-- "구글 검색 기반" 문구 삭제 -->
                 <label for="main-title" class="font-bold text-gray-600">1. 카드뉴스 키워드 입력</label>
                 <div class="input-with-button">
-                    <input type="text" id="main-title" placeholder="예: 시부야 맛집 TOP7" value="">
+                    <input type="text" id="main-title" placeholder="예: 시부야 맛집 TOP 7" value="">
                     <button id="clear-button" class="input-clear-btn" style="display:none;">
                         &#x2715;
                     </button>
@@ -416,7 +416,12 @@ Summary: ${content}`;
                     throw new Error("API 응답에서 유효한 텍스트를 찾을 수 없습니다.");
                 }
 
+                // AI 응답 앞뒤의 markdown 코드 블록을 제거합니다.
                 jsonText = jsonText.replace(/^```(json)?\s*|```\s*$/g, '').trim();
+
+                // 💡 이번에는 더 강력한 정규표현식을 사용해 띄어쓰기를 포함한 모든 출처 표기를 제거합니다.
+                const citationRegex = /\s*\[\d+(?:,\s*\d+)*\]/g;
+                jsonText = jsonText.replace(citationRegex, '').trim();
 
                 const parsedJson = JSON.parse(jsonText);
                 outputMainTitle.innerText = parsedJson.mainTitle || "제목 없음";
@@ -426,7 +431,9 @@ Summary: ${content}`;
                 }
 
                 parsedJson.cards.forEach((card, index) => {
-                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', card.content || '내용이 생성되지 않았습니다.');
+                    // 카드 내용에서도 출처 표기를 한 번 더 제거합니다.
+                    const cleanedContent = (card.content || '내용이 생성되지 않았습니다.').replace(citationRegex, '');
+                    createCard(index + 1, card.emoji || '✨', card.title || '제목 없음', card.subtitle || '부제목 없음', cleanedContent);
                 });
 
                 if (parsedJson.cards.length > 0) {
@@ -516,5 +523,4 @@ Summary: ${content}`;
     </script>
 </body>
 </html>
-
 
